@@ -47,185 +47,185 @@ int pitchMin = 10; // this sets the minimum angle of the pitch servo to prevent 
 
 void setup()
 {
-  Serial.begin( 9600 );
+   Serial.begin( 9600 );
 
-  yawServo.attach( 10 ); //attach YAW servo to pin 10
-  pitchServo.attach( 11 ); //attach PITCH servo to pin 11
-  rollServo.attach( 12 ); //attach ROLL servo to pin 12
+   yawServo.attach( 10 ); //attach YAW servo to pin 10
+   pitchServo.attach( 11 ); //attach PITCH servo to pin 11
+   rollServo.attach( 12 ); //attach ROLL servo to pin 12
 
-  IrReceiver.begin( 9, ENABLE_LED_FEEDBACK );
+   IrReceiver.begin( 9, ENABLE_LED_FEEDBACK );
 
-  homeServos();
+   homeServos();
 }
 
 void shakeHeadYes( int moves = 3 )
 {
-  int startAngle = pitchServoVal; // Current position of the pitch servo
-  int lastAngle = pitchServoVal;
-  int nodAngle = startAngle + 20; // Angle for nodding motion
+   int startAngle = pitchServoVal; // Current position of the pitch servo
+   int lastAngle = pitchServoVal;
+   int nodAngle = startAngle + 20; // Angle for nodding motion
 
-  for ( int i = 0; i < moves; i++ )
-  {
-    // Nod up
-    for ( int angle = startAngle; angle <= nodAngle; angle++ )
-    {
-      pitchServo.write( angle );
-      delay( 7 );
-    }
-    delay( 50 );
+   for ( int i = 0; i < moves; i++ )
+   {
+      // Nod up
+      for ( int angle = startAngle; angle <= nodAngle; angle++ )
+      {
+         pitchServo.write( angle );
+         delay( 7 );
+      }
+      delay( 50 );
 
-    // Nod down
-    for ( int angle = nodAngle; angle >= startAngle; angle-- )
-    {
-      pitchServo.write( angle );
-      delay( 7 );
-    }
+      // Nod down
+      for ( int angle = nodAngle; angle >= startAngle; angle-- )
+      {
+         pitchServo.write( angle );
+         delay( 7 );
+      }
 
-    delay( 50 );
-  }
+      delay( 50 );
+   }
 }
 
 void shakeHeadNo( int moves = 3 )
 {
-  int startAngle = pitchServoVal; // Current position of the pitch servo
-  int lastAngle = pitchServoVal;
-  int nodAngle = startAngle + 60; // Angle for nodding motion
+   int startAngle = pitchServoVal; // Current position of the pitch servo
+   int lastAngle = pitchServoVal;
+   int nodAngle = startAngle + 60; // Angle for nodding motion
 
-  for ( int i = 0; i < moves; i++ )
-  {
-    // rotate right, stop, then rotate left, stop
-    yawServo.write( 140 );
-    delay( 190 ); // Adjust delay for smoother motion
-    yawServo.write( yawStopSpeed );
-    delay( 50 );
-    yawServo.write( 40 );
-    delay( 190 ); // Adjust delay for smoother motion
-    yawServo.write( yawStopSpeed );
-    delay( 50 ); // Pause at starting position
-  }
+   for ( int i = 0; i < moves; i++ )
+   {
+      // rotate right, stop, then rotate left, stop
+      yawServo.write( 140 );
+      delay( 190 ); // Adjust delay for smoother motion
+      yawServo.write( yawStopSpeed );
+      delay( 50 );
+      yawServo.write( 40 );
+      delay( 190 ); // Adjust delay for smoother motion
+      yawServo.write( yawStopSpeed );
+      delay( 50 ); // Pause at starting position
+   }
 }
 
 void loop()
 {
-  if ( IrReceiver.decode() )
-  {
-    IrReceiver.resume();
+   if ( IrReceiver.decode() )
+   {
+      IrReceiver.resume();
 
-    switch ( IrReceiver.decodedIRData.command )
-    {
-      case up:
+      switch ( IrReceiver.decodedIRData.command )
       {
-        upMove( 1 );
-        break;
+         case up:
+         {
+            upMove( 1 );
+            break;
+         }
+         case down:
+         {
+            downMove( 1 );
+            break;
+         }
+         case left:
+         {
+            leftMove( 1 );
+            break;
+         }
+         case right:
+         {
+            rightMove( 1 );
+            break;
+         }
+         case ok:
+         {
+            fire();
+            break;
+         }
+         case star:
+         {
+            fireAll();
+            delay( 50 );
+            break;
+         }
+         case hashtag:
+         {
+            shakeHeadYes( 3 );
+            shakeHeadNo( 3 );
+            break;
+         }
       }
-      case down:
-      {
-        downMove( 1 );
-        break;
-      }
-      case left:
-      {
-        leftMove( 1 );
-        break;
-      }
-      case right:
-      {
-        rightMove( 1 );
-        break;
-      }
-      case ok:
-      {
-        fire();
-        break;
-      }
-      case star:
-      {
-        fireAll();
-        delay( 50 );
-        break;
-      }
-      case hashtag:
-      {
-        shakeHeadYes( 3 );
-        shakeHeadNo( 3 );
-        break;
-      }
-    }
-  }
-  delay( 5 );
+   }
+   delay( 5 );
 }
 
 void leftMove( int moves )
 {
-  for ( int i = 0; i < moves; i++ )
-  {
-    yawServo.write( yawStopSpeed + yawMoveSpeed ); // adding the servo speed = 180 (full counterclockwise rotation speed)
-    delay( yawPrecision ); // stay rotating for a certain number of milliseconds
-    yawServo.write( yawStopSpeed ); // stop rotating
-    delay( 5 ); //delay for smoothness
-  }
+   for ( int i = 0; i < moves; i++ )
+   {
+      yawServo.write( yawStopSpeed + yawMoveSpeed ); // adding the servo speed = 180 (full counterclockwise rotation speed)
+      delay( yawPrecision ); // stay rotating for a certain number of milliseconds
+      yawServo.write( yawStopSpeed ); // stop rotating
+      delay( 5 ); //delay for smoothness
+   }
 }
 
 void rightMove( int moves )
 {
-  for ( int i = 0; i < moves; i++ )
-  {
-    yawServo.write( yawStopSpeed - yawMoveSpeed ); //subtracting the servo speed = 0 (full clockwise rotation speed)
-    delay( yawPrecision );
-    yawServo.write( yawStopSpeed );
-    delay( 5 );
-  }
+   for ( int i = 0; i < moves; i++ )
+   {
+      yawServo.write( yawStopSpeed - yawMoveSpeed ); //subtracting the servo speed = 0 (full clockwise rotation speed)
+      delay( yawPrecision );
+      yawServo.write( yawStopSpeed );
+      delay( 5 );
+   }
 }
 
 void upMove( int moves )
 {
-  for ( int i = 0; i < moves; i++ )
-  {
-    if ( pitchServoVal > pitchMin ) //make sure the servo is within rotation limits (greater than 10 degrees by default)
-    {
-      pitchServoVal = pitchServoVal - pitchMoveSpeed; //decrement the current angle and update
-      pitchServo.write( pitchServoVal );
-      delay( 50 );
-    }
-  }
+   for ( int i = 0; i < moves; i++ )
+   {
+      if ( pitchServoVal > pitchMin ) //make sure the servo is within rotation limits (greater than 10 degrees by default)
+      {
+         pitchServoVal = pitchServoVal - pitchMoveSpeed; //decrement the current angle and update
+         pitchServo.write( pitchServoVal );
+         delay( 50 );
+      }
+   }
 }
 
 void downMove( int moves )
 {
-  for ( int i = 0; i < moves; i++ )
-  {
-    if ( pitchServoVal < pitchMax ) //make sure the servo is within rotation limits (less than 175 degrees by default)
-    {
-      pitchServoVal = pitchServoVal + pitchMoveSpeed;//increment the current angle and update
-      pitchServo.write( pitchServoVal );
-      delay( 50 );
-    }
-  }
+   for ( int i = 0; i < moves; i++ )
+   {
+      if ( pitchServoVal < pitchMax ) //make sure the servo is within rotation limits (less than 175 degrees by default)
+      {
+         pitchServoVal = pitchServoVal + pitchMoveSpeed;//increment the current angle and update
+         pitchServo.write( pitchServoVal );
+         delay( 50 );
+      }
+   }
 }
 
 void fire()
 {
-  rollServo.write( rollStopSpeed + rollMoveSpeed );//start rotating the servo
-  delay( rollPrecision );//time for approximately 60 degrees of rotation
-  rollServo.write( rollStopSpeed );//stop rotating the servo
-  delay( 5 ); //delay for smoothness
+   rollServo.write( rollStopSpeed + rollMoveSpeed );//start rotating the servo
+   delay( rollPrecision );//time for approximately 60 degrees of rotation
+   rollServo.write( rollStopSpeed );//stop rotating the servo
+   delay( 5 ); //delay for smoothness
 }
 
 void fireAll()
 {
-  rollServo.write( rollStopSpeed + rollMoveSpeed );//start rotating the servo
-  delay( rollPrecision * 6 ); //time for 360 degrees of rotation
-  rollServo.write( rollStopSpeed );//stop rotating the servo
-  delay( 5 ); // delay for smoothness
+   rollServo.write( rollStopSpeed + rollMoveSpeed );//start rotating the servo
+   delay( rollPrecision * 6 ); //time for 360 degrees of rotation
+   rollServo.write( rollStopSpeed );//stop rotating the servo
+   delay( 5 ); // delay for smoothness
 }
 
 void homeServos()
 {
-  yawServo.write( yawStopSpeed ); //setup YAW servo to be STOPPED (90)
-  delay( 20 );
-  rollServo.write( rollStopSpeed ); //setup ROLL servo to be STOPPED (90)
-  delay( 100 );
-  pitchServo.write( 100 ); //set PITCH servo to 100 degree position
-  delay( 100 );
-  pitchServoVal = 100; // store the pitch servo value
+   yawServo.write( yawStopSpeed ); //setup YAW servo to be STOPPED (90)
+   delay( 20 );
+   rollServo.write( rollStopSpeed ); //setup ROLL servo to be STOPPED (90)
+   delay( 100 );
+   pitchServo.write( 100 ); //set PITCH servo to 100 degree position
+   delay( 100 );
+   pitchServoVal = 100; // store the pitch servo value
 }
