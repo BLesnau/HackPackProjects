@@ -2,6 +2,9 @@
 #include "PinDefinitionsAndMore.h"
 #include <IRremote.hpp>
 
+#define DECODE_NEC // Defines the type of IR transmission to decode based on the remote. See IRremote library for examples on how to decode other types of remote
+
+// Codes for buttons on remote
 #define left 0x8
 #define right 0x5A
 #define up 0x52
