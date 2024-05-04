@@ -23,11 +23,16 @@
 #define star 0x16
 #define hashtag 0xD
 
+// Map a ration to a range. For example, .5 shoudl fall in the middle of a range if the input can be 0-1
 double mapDouble( double x, double in_min, double in_max, double out_min, double out_max )
 {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
+// Dance move for rotating roll and yaw servos
+// You can assign a duration and speed
+// Duration is milliseconds
+// Speed is from 0-1
 struct DanceSpeedMove
 {
   unsigned long duration;
@@ -41,6 +46,10 @@ struct DanceSpeedMove
   }
 };
 
+// Dance move for rotating pitch servo
+// You can assign a target angle and speed
+// Target angle (degrees) is the angle you want to end up at
+// Speed degrees/sec
 struct DanceAngleMove
 {
   int targetAngle;
@@ -54,6 +63,14 @@ struct DanceAngleMove
   }
 };
 
+ // Controller to define properties for a servo that lets you set the speed
+ // and rotates 360 degrees. This is for the roll and yaw servos.
+ // pin: Arduino pin for servo
+ // zeroSpd: Speed that is used to keep servo stationary
+ // minSpdRange: Minimum speed needed to get servo moving. You may need to experient for your own values
+ // maxSpdRange: Maximum speed needed to get servo moving. You may need to experient for your own values
+ // moveArray: Array of dance moves to perform
+ // moveCount: Number of dance moves in moveArray
 class ServoSpeedController
 {
 public:
@@ -123,6 +140,14 @@ public:
   }
 };
 
+// Controller to define properties for a servo that lets you set an angle.
+// This is for the pitch servo.
+// pin: Arduino pin for servo
+// minAng: Minimum angle allowed. Prevents rotating too much in one direction.
+// maxAng: Maximum angle allowed. Prevents rotating too much in one direction.
+// maxSpde: Maximum degrees/sec movement allowed
+// moveArray: Array of dance moves to perform
+// moveCount: Number of dance moves in moveArray
 class ServoAngleController
 {
 public:
