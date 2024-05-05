@@ -39,6 +39,8 @@ struct DanceSpeedMove
    double speed;
    bool started;
 
+   DanceSpeedMove() {}
+
    DanceSpeedMove( unsigned long dur, double spd = 0.0 )
       : duration( dur ), speed( spd ), started( false )
    {
@@ -53,13 +55,14 @@ struct DanceSpeedMove
 struct DanceAngleMove
 {
    int targetAngle;
-   double speed;
+   int speed;
    bool started;
+
+   DanceAngleMove() {}
 
    DanceAngleMove( int targetAng, int spd )
       : targetAngle( targetAng ), speed( spd )
    {
-
    }
 };
 
@@ -74,8 +77,8 @@ class ServoSpeedController
 {
 public:
    Servo servo;
-   DanceSpeedMove* moves;
-   int numMoves;
+   DanceSpeedMove* moves = nullptr;
+   int numMoves = 0;
    int currentMoveIndex = 0;
    unsigned long startMoveTime;
    unsigned long lastTime;
@@ -96,12 +99,19 @@ public:
       lastTime = millis();
       startMoveTime = lastTime;
       currentMoveIndex = 0;
+
+      if ( moves != nullptr )
+      {
+         delete[] moves;
+         moves = nullptr;
+      }
+      numMoves = 0;
    }
 
    void SetDanceMoves( DanceSpeedMove moveArray[], int moveCount )
    {
       Reset();
-      moves = moveArray;
+      moves = new DanceSpeedMove[moveCount];
       memcpy( moves, moveArray, moveCount * sizeof( DanceSpeedMove ) );
       numMoves = moveCount;
    }
@@ -165,8 +175,8 @@ class ServoAngleController
 {
 public:
    Servo servo;
-   DanceAngleMove* moves;
-   int numMoves;
+   DanceAngleMove* moves = nullptr;
+   int numMoves = 0;
    int currentMoveIndex = 0;
    unsigned long lastTime;
    double currentPosition;
@@ -185,13 +195,20 @@ public:
       lastTime = millis();
       moveTo( minAngle + (double( maxAngle - minAngle ) / 2.0) );
       currentMoveIndex = 0;
+
+      if ( moves != nullptr )
+      {
+         delete[] moves;
+         moves = nullptr;
+      }
+      numMoves = 0;
    }
 
    void SetDanceMoves( DanceAngleMove moveArray[], int moveCount )
    {
       Reset();
-      moves = moveArray;
-      memcpy( moves, moveArray, moveCount * sizeof( DanceSpeedMove ) );
+      moves = new DanceAngleMove[moveCount];
+      memcpy( moves, moveArray, moveCount * sizeof( DanceAngleMove ) );
       numMoves = moveCount;
    }
 
@@ -246,6 +263,10 @@ bool _playing = false;
 
 void SetDanceRoutine1()
 {
+   _rollServo->Reset();
+   _yawServo->Reset();
+   _pitchServo->Reset();
+
    DanceSpeedMove rollMoves[] =
    {
      DanceSpeedMove( 5000, .4 ),
@@ -256,10 +277,10 @@ void SetDanceRoutine1()
 
    DanceSpeedMove yawMoves[] =
    {
-     DanceSpeedMove( 5000, .2 ),
-     DanceSpeedMove( 5000, -.2 ),
-     DanceSpeedMove( 5000, .2 ),
-     DanceSpeedMove( 5000, -.2 ),
+     DanceSpeedMove( 500, .2 ),
+     DanceSpeedMove( 500, -.2 ),
+     DanceSpeedMove( 500, .2 ),
+     DanceSpeedMove( 500, -.2 ),
    };
 
    DanceAngleMove pitchMoves[] =
@@ -279,6 +300,10 @@ void SetDanceRoutine1()
 
 void SetDanceRoutine2()
 {
+   _rollServo->Reset();
+   _yawServo->Reset();
+   _pitchServo->Reset();
+
    DanceSpeedMove rollMoves[] =
    {
      DanceSpeedMove( 5000, .4 ),
@@ -287,8 +312,8 @@ void SetDanceRoutine2()
 
    DanceSpeedMove yawMoves[] =
    {
-     DanceSpeedMove( 5000, .2 ),
-     DanceSpeedMove( 5000, -.2 ),
+     DanceSpeedMove( 500, .2 ),
+     DanceSpeedMove( 500, -.2 ),
    };
 
    DanceAngleMove pitchMoves[] =
@@ -316,6 +341,15 @@ void setup()
 
 void loop()
 {
+   if ( _playing )
+   {
+      auto donePlaying = _rollServo->update();
+      donePlaying &= _yawServo->update();
+      donePlaying &= _pitchServo->update();
+
+      _playing = !donePlaying;
+   }
+
    if ( IrReceiver.decode() )
    {
       IrReceiver.resume();
@@ -348,15 +382,6 @@ void loop()
             _pitchServo->Reset();
          }
       }
-   }
-
-   if ( _playing )
-   {
-      auto donePlaying = _rollServo->update();
-      donePlaying &= _yawServo->update();
-      donePlaying &= _pitchServo->update();
-
-      _playing = !donePlaying;
    }
 
    delay( 10 );
