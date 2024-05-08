@@ -23,7 +23,7 @@
 #define star 0x16
 #define hashtag 0xD
 
-// Map a ration to a range. For example, .5 shoudl fall in the middle of a range if the input can be 0-1
+// Map a ration to a range. For example, .5 should fall in the middle of a range if the input can be 0-1
 double mapDouble( double x, double in_min, double in_max, double out_min, double out_max )
 {
    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
@@ -49,19 +49,20 @@ struct DanceSpeedMove
 };
 
 // Dance move for rotating pitch servo
-// You can assign a target angle and speed
+// You can assign a target angle and duration
 // Target angle (degrees) is the angle you want to end up at
-// Speed degrees/sec
+// Duration is milliseconds
 struct DanceAngleMove
 {
    int targetAngle;
-   int speed;
+   unsigned long duration;
+   double speed;
    bool started;
 
    DanceAngleMove() {}
 
-   DanceAngleMove( int targetAng, int spd )
-      : targetAngle( targetAng ), speed( spd )
+   DanceAngleMove( int targetAng, unsigned long dur )
+      : targetAngle( targetAng ), duration( dur ), started( false )
    {
    }
 };
@@ -230,26 +231,27 @@ public:
       DanceAngleMove& move = moves[currentMoveIndex];
       unsigned long timeElapsed = currentTime - lastTime;
       double secsElapsed = (double)timeElapsed / 1000.0;
-      double degreesToMove = move.speed * secsElapsed;
-      degreesToMove = min( maxSpeed, degreesToMove );
-
       auto targetAngle = max( minAngle, min( maxAngle, move.targetAngle ) );
-      auto direction = (targetAngle - currentPosition) > 0 ? 1 : -1;
-      auto newPosition = currentPosition + (degreesToMove * direction);
 
-      if ( (direction > 0 && newPosition >= targetAngle) ||
-         (direction < 0 && newPosition <= targetAngle) )
+      if ( !move.started )
+      {
+         move.started = true;
+         move.speed = ((double)targetAngle - currentPosition) / ((double)move.duration / 1000.0);
+         move.speed = min( maxSpeed, move.speed );
+      }
+
+      auto amtToMove = move.speed * secsElapsed;
+      auto newPosition = currentPosition + amtToMove;
+
+      if ( (move.speed > 0 && newPosition >= targetAngle) ||
+         (move.speed < 0 && newPosition <= targetAngle) )
       {
          newPosition = targetAngle;
          currentMoveIndex++;
       }
 
-      double minimumDegreesToMove = .1;
-      if ( degreesToMove >= minimumDegreesToMove )
-      {
-         moveTo( newPosition );
-         lastTime = currentTime;
-      }
+      moveTo( newPosition );
+      lastTime = currentTime;
 
       return false;
    }
@@ -285,12 +287,12 @@ void SetDanceRoutine1()
 
    DanceAngleMove pitchMoves[] =
    {
-       DanceAngleMove( 150, 50 ),
-       DanceAngleMove( 35, 50 ),
-       DanceAngleMove( 150, 50 ),
-       DanceAngleMove( 35, 50 ),
-       DanceAngleMove( 150, 50 ),
-       DanceAngleMove( 95, 50 ),
+       DanceAngleMove( 150, 1000 ),
+       DanceAngleMove( 35, 2000 ),
+       DanceAngleMove( 150, 1000 ),
+       DanceAngleMove( 150, 1000 ),
+       DanceAngleMove( 35, 2000 ),
+       DanceAngleMove( 150, 1000 ),
    };
 
    _rollServo->SetDanceMoves( rollMoves, sizeof( rollMoves ) / sizeof( DanceSpeedMove ) );
@@ -306,21 +308,21 @@ void SetDanceRoutine2()
 
    DanceSpeedMove rollMoves[] =
    {
-     DanceSpeedMove( 5000, .4 ),
-     DanceSpeedMove( 5000, -.4 ),
+      //DanceSpeedMove( 5000, .4 ),
+      //DanceSpeedMove( 5000, -.4 ),
    };
 
    DanceSpeedMove yawMoves[] =
    {
-     DanceSpeedMove( 500, .2 ),
-     DanceSpeedMove( 500, -.2 ),
+      //DanceSpeedMove( 500, .2 ),
+      //DanceSpeedMove( 500, -.2 ),
    };
 
    DanceAngleMove pitchMoves[] =
    {
-       DanceAngleMove( 150, 50 ),
-       DanceAngleMove( 35, 50 ),
-       DanceAngleMove( 150, 50 ),
+       DanceAngleMove( 150, 1000 ),
+       DanceAngleMove( 35, 2000 ),
+       DanceAngleMove( 150, 5000 ),
    };
 
    _rollServo->SetDanceMoves( rollMoves, sizeof( rollMoves ) / sizeof( DanceSpeedMove ) );
@@ -334,7 +336,7 @@ void setup()
 
    _rollServo = new ServoSpeedController( 12, 90, 45, 90 );
    _yawServo = new ServoSpeedController( 10, 90, 45, 90 );
-   _pitchServo = new ServoAngleController( 11, 35, 170, 5 );
+   _pitchServo = new ServoAngleController( 11, 35, 170, 100 );
 
    IrReceiver.begin( 9, ENABLE_LED_FEEDBACK );
 }
