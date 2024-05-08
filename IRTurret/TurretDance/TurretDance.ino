@@ -35,21 +35,29 @@ public:
    unsigned long duration;
    double speed;
    bool started = false;
+   bool isWaitMove = false;
 };
 
 // Dance move for rotating roll and yaw servos
 // You can assign a duration and speed
 // Duration is milliseconds
 // Speed is from 0-1
+// You can also use the other constructor to define a duration to wait for
 struct DanceSpeedMove : DanceMove
 {
 public:
    DanceSpeedMove() {}
 
-   DanceSpeedMove( unsigned long dur, double spd = 0.0 )
+   DanceSpeedMove( unsigned long dur, double spd )
    {
       duration = dur;
       speed = max( -1, min( spd, 1 ) );
+   }
+
+   DanceSpeedMove( unsigned long dur )
+   {
+      duration = dur;
+      isWaitMove = true;
    }
 };
 
@@ -57,6 +65,7 @@ public:
 // You can assign a target angle and duration
 // Target angle (degrees) is the angle you want to end up at
 // Duration is milliseconds
+// You can also use the other constructor to define a duration to wait for
 struct DanceAngleMove : DanceMove
 {
 public:
@@ -68,6 +77,12 @@ public:
       : targetAngle( targetAng )
    {
       duration = dur;
+   }
+
+   DanceAngleMove( unsigned long dur )
+   {
+      duration = dur;
+      isWaitMove = true;
    }
 };
 
@@ -166,7 +181,10 @@ public:
             speed = mapDouble( move.speed, -1, 0, zeroSpeed - maxSpeed, zeroSpeed - minSpeed );
          }
 
-         MoveTo( speed );
+         if ( !move.isWaitMove )
+         {
+            MoveTo( speed );
+         }
       }
 
       if ( animTimeElapsed >= move.duration )
@@ -261,13 +279,24 @@ public:
 
       if ( animTimeElapsed >= move.duration )
       {
+         if ( !move.isWaitMove )
+         {
+            Serial.print( "Before:" );
+            Serial.println( currentPosition );
+            MoveTo( targetAngle );
+            Serial.print( "After:" );
+            Serial.println( currentPosition );
+         }
+
          currentMoveIndex++;
          startMoveTime = millis();
-         MoveTo( targetAngle );
       }
       else
       {
-         MoveTo( newPosition );
+         if ( !move.isWaitMove )
+         {
+            MoveTo( newPosition );
+         }
       }
 
       lastTime = currentTime;
@@ -282,30 +311,6 @@ ServoAngleController* _pitchServo;
 
 bool _playing = false;
 
-void SetResetRoutine()
-{
-   _rollServo->Reset();
-   _yawServo->Reset();
-   _pitchServo->Reset();
-
-   DanceSpeedMove rollMoves[] =
-   {
-   };
-
-   DanceSpeedMove yawMoves[] =
-   {
-   };
-
-   DanceAngleMove pitchMoves[] =
-   {
-       DanceAngleMove( 93, 1000 ),
-   };
-
-   _rollServo->SetDanceMoves( rollMoves, sizeof( rollMoves ) / sizeof( DanceSpeedMove ) );
-   _yawServo->SetDanceMoves( yawMoves, sizeof( yawMoves ) / sizeof( DanceSpeedMove ) );
-   _pitchServo->SetDanceMoves( pitchMoves, sizeof( pitchMoves ) / sizeof( DanceAngleMove ) );
-}
-
 void SetDanceRoutine1()
 {
    _rollServo->Reset();
@@ -314,28 +319,32 @@ void SetDanceRoutine1()
 
    DanceSpeedMove rollMoves[] =
    {
-     DanceSpeedMove( 5000, .4 ),
-     DanceSpeedMove( 5000, -.4 ),
-     DanceSpeedMove( 5000, .4 ),
-     DanceSpeedMove( 5000, -.4 ),
+      DanceSpeedMove( 3000 ),
+      DanceSpeedMove( 2000, .4 ),
+      DanceSpeedMove( 2000, -.4 ),
+      DanceSpeedMove( 2000, .4 ),
+      DanceSpeedMove( 2000, -.4 ),
    };
 
    DanceSpeedMove yawMoves[] =
    {
-     DanceSpeedMove( 500, .2 ),
-     DanceSpeedMove( 500, -.2 ),
-     DanceSpeedMove( 500, .2 ),
-     DanceSpeedMove( 500, -.2 ),
+      DanceSpeedMove( 3000 ),
+      DanceSpeedMove( 500, .2 ),
+      DanceSpeedMove( 500, -.2 ),
+      DanceSpeedMove( 500, .2 ),
+      DanceSpeedMove( 500, -.2 ),
    };
 
    DanceAngleMove pitchMoves[] =
    {
-       DanceAngleMove( 150, 1000 ),
-       DanceAngleMove( 35, 2000 ),
-       DanceAngleMove( 150, 1000 ),
-       DanceAngleMove( 150, 1000 ),
-       DanceAngleMove( 35, 2000 ),
-       DanceAngleMove( 150, 1000 ),
+      DanceAngleMove( 93, 1000 ),
+      DanceAngleMove( 2000 ),
+      DanceAngleMove( 150, 1000 ),
+      DanceAngleMove( 35, 2000 ),
+      DanceAngleMove( 150, 1000 ),
+      DanceAngleMove( 150, 1000 ),
+      DanceAngleMove( 35, 2000 ),
+      DanceAngleMove( 150, 1000 ),
    };
 
    _rollServo->SetDanceMoves( rollMoves, sizeof( rollMoves ) / sizeof( DanceSpeedMove ) );
@@ -351,21 +360,25 @@ void SetDanceRoutine2()
 
    DanceSpeedMove rollMoves[] =
    {
-      DanceSpeedMove( 5000, .4 ),
-      DanceSpeedMove( 5000, -.4 ),
+      DanceSpeedMove( 3000 ),
+      DanceSpeedMove( 2000, .4 ),
+      DanceSpeedMove( 2000, -.4 ),
    };
 
    DanceSpeedMove yawMoves[] =
    {
+      DanceSpeedMove( 3000 ),
       DanceSpeedMove( 500, .2 ),
       DanceSpeedMove( 500, -.2 ),
    };
 
    DanceAngleMove pitchMoves[] =
    {
-       DanceAngleMove( 150, 1000 ),
-       DanceAngleMove( 35, 2000 ),
-       DanceAngleMove( 150, 1000 ),
+      DanceAngleMove( 93, 1000 ),
+      DanceAngleMove( 2000 ),
+      DanceAngleMove( 150, 1000 ),
+      DanceAngleMove( 35, 2000 ),
+      DanceAngleMove( 150, 1000 ),
    };
 
    _rollServo->SetDanceMoves( rollMoves, sizeof( rollMoves ) / sizeof( DanceSpeedMove ) );
@@ -421,8 +434,7 @@ void loop()
          }
          case ok:
          {
-            _playing = true;
-            SetResetRoutine();
+            _playing = false;
          }
       }
    }
