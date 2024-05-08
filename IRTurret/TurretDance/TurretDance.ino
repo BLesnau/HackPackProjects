@@ -29,22 +29,27 @@ double mapDouble( double x, double in_min, double in_max, double out_min, double
    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
+struct DanceMove
+{
+public:
+   unsigned long duration;
+   double speed;
+   bool started = false;
+};
+
 // Dance move for rotating roll and yaw servos
 // You can assign a duration and speed
 // Duration is milliseconds
 // Speed is from 0-1
-struct DanceSpeedMove
+struct DanceSpeedMove : DanceMove
 {
-   unsigned long duration;
-   double speed;
-   bool started;
-
+public:
    DanceSpeedMove() {}
 
    DanceSpeedMove( unsigned long dur, double spd = 0.0 )
-      : duration( dur ), speed( spd ), started( false )
    {
-      speed = max( -1, min( speed, 1 ) );
+      duration = dur;
+      speed = max( -1, min( spd, 1 ) );
    }
 };
 
@@ -52,51 +57,77 @@ struct DanceSpeedMove
 // You can assign a target angle and duration
 // Target angle (degrees) is the angle you want to end up at
 // Duration is milliseconds
-struct DanceAngleMove
+struct DanceAngleMove : DanceMove
 {
+public:
    int targetAngle;
-   unsigned long duration;
-   double speed;
-   bool started;
 
    DanceAngleMove() {}
 
    DanceAngleMove( int targetAng, unsigned long dur )
-      : targetAngle( targetAng ), duration( dur ), started( false )
+      : targetAngle( targetAng )
    {
+      duration = dur;
    }
+};
+
+class ServoController
+{
+public:
+   virtual void Reset() = 0;
+   virtual bool Update() = 0;
+
+protected:
+   Servo servo;
+   int numMoves = 0;
+   int currentMoveIndex = 0;
+   unsigned long startMoveTime;
+   unsigned long lastTime;
+   double currentPosition;
+   int maxSpeed;
+
+   virtual void MoveTo( double position ) = 0;
 };
 
 // Controller to define properties for a servo that lets you set the speed
 // and rotates 360 degrees. This is for the roll and yaw servos.
 // pin: Arduino pin for servo
 // zeroSpd: Speed that is used to keep servo stationary
-// minSpdRange: Minimum speed needed to get servo moving. You may need to experient for your own values
-// maxSpdRange: Maximum speed needed to get servo moving. You may need to experient for your own values
+// minSpd: Minimum speed needed to get servo moving. You may need to experient for your own values
+// maxSpd: Maximum speed needed to get servo moving. You may need to experient for your own values
 // moveArray: Array of dance moves to perform
-class ServoSpeedController
+class ServoSpeedController : ServoController
 {
-public:
-   Servo servo;
+private:
    DanceSpeedMove* moves = nullptr;
-   int numMoves = 0;
-   int currentMoveIndex = 0;
-   unsigned long startMoveTime;
-   unsigned long lastTime;
-   double currentPosition;
    int zeroSpeed;
-   int minSpeedRange;
-   int maxSpeedRange;
+   int minSpeed;
 
-   ServoSpeedController( int pin, int zeroSpd, int minSpdRange, int maxSpdRange )
-      : zeroSpeed( zeroSpd ), minSpeedRange( minSpdRange ), maxSpeedRange( maxSpdRange )
+   void MoveTo( double position ) override
    {
+      servo.write( position );
+      currentPosition = position;
+   }
+
+public:
+   ServoSpeedController( int pin, int zeroSpd, int minSpd, int maxSpd )
+      : zeroSpeed( zeroSpd ), minSpeed( minSpd )
+   {
+      maxSpeed = maxSpd;
       servo.attach( pin );
    }
 
-   void Reset()
+   void SetDanceMoves( DanceSpeedMove moveArray[], int moveCount )
    {
-      moveTo( zeroSpeed );
+      Reset();
+      moves = new DanceSpeedMove[moveCount];
+      memcpy( moves, moveArray, moveCount * sizeof( DanceSpeedMove ) );
+      numMoves = moveCount;
+   }
+
+   void Reset() override
+   {
+      MoveTo( zeroSpeed );
       lastTime = millis();
       startMoveTime = lastTime;
       currentMoveIndex = 0;
@@ -109,21 +140,7 @@ public:
       numMoves = 0;
    }
 
-   void SetDanceMoves( DanceSpeedMove moveArray[], int moveCount )
-   {
-      Reset();
-      moves = new DanceSpeedMove[moveCount];
-      memcpy( moves, moveArray, moveCount * sizeof( DanceSpeedMove ) );
-      numMoves = moveCount;
-   }
-
-   void moveTo( double position )
-   {
-      servo.write( position );
-      currentPosition = position;
-   }
-
-   bool update()
+   bool Update() override
    {
       if ( currentMoveIndex >= numMoves )
       {
@@ -142,21 +159,21 @@ public:
          double speed = zeroSpeed;
          if ( move.speed > 0 )
          {
-            speed = mapDouble( move.speed, 0, 1, zeroSpeed + minSpeedRange, zeroSpeed + maxSpeedRange );
+            speed = mapDouble( move.speed, 0, 1, zeroSpeed + minSpeed, zeroSpeed + maxSpeed );
          }
          else if ( move.speed < 0 )
          {
-            speed = mapDouble( move.speed, -1, 0, zeroSpeed - maxSpeedRange, zeroSpeed - minSpeedRange );
+            speed = mapDouble( move.speed, -1, 0, zeroSpeed - maxSpeed, zeroSpeed - minSpeed );
          }
 
-         moveTo( speed );
+         MoveTo( speed );
       }
 
       if ( animTimeElapsed >= move.duration )
       {
          currentMoveIndex++;
          startMoveTime = millis();
-         moveTo( zeroSpeed );
+         MoveTo( zeroSpeed );
       }
 
       lastTime = currentTime;
@@ -172,37 +189,28 @@ public:
 // maxAng: Maximum angle allowed. Prevents rotating too much in one direction.
 // maxSpde: Maximum degrees/sec movement allowed
 // moveArray: Array of dance moves to perform
-class ServoAngleController
+class ServoAngleController : ServoController
 {
-public:
-   Servo servo;
+private:
    DanceAngleMove* moves = nullptr;
-   int numMoves = 0;
-   int currentMoveIndex = 0;
-   unsigned long lastTime;
-   double currentPosition;
-   int maxSpeed;
    int minAngle;
    int maxAngle;
 
-   ServoAngleController( int pin, int minAng, int maxAng, int maxSpd )
-      : minAngle( minAng ), maxAngle( maxAng ), maxSpeed( maxSpd )
+   void MoveTo( double position ) override
    {
-      servo.attach( pin );
+      position = max( minAngle, min( maxAngle, position ) );
+      servo.write( position );
+      currentPosition = position;
    }
 
-   void Reset()
+public:
+   ServoAngleController( int pin, int minAng, int maxAng, int maxSpd )
+      : minAngle( minAng ), maxAngle( maxAng )
    {
-      lastTime = millis();
-      moveTo( minAngle + (double( maxAngle - minAngle ) / 2.0) );
-      currentMoveIndex = 0;
+      maxSpeed = maxSpd;
+      servo.attach( pin );
 
-      if ( moves != nullptr )
-      {
-         delete[] moves;
-         moves = nullptr;
-      }
-      numMoves = 0;
+      MoveTo( minAngle + (double( maxAngle - minAngle ) / 2.0) );
    }
 
    void SetDanceMoves( DanceAngleMove moveArray[], int moveCount )
@@ -213,14 +221,21 @@ public:
       numMoves = moveCount;
    }
 
-   void moveTo( double position )
+   void Reset() override
    {
-      position = max( minAngle, min( maxAngle, position ) );
-      servo.write( position );
-      currentPosition = position;
+      lastTime = millis();
+      startMoveTime = lastTime;
+      currentMoveIndex = 0;
+
+      if ( moves != nullptr )
+      {
+         delete[] moves;
+         moves = nullptr;
+      }
+      numMoves = 0;
    }
 
-   bool update()
+   bool Update() override
    {
       if ( currentMoveIndex >= numMoves )
       {
@@ -232,6 +247,7 @@ public:
       unsigned long timeElapsed = currentTime - lastTime;
       double secsElapsed = (double)timeElapsed / 1000.0;
       auto targetAngle = max( minAngle, min( maxAngle, move.targetAngle ) );
+      unsigned long animTimeElapsed = currentTime - startMoveTime;
 
       if ( !move.started )
       {
@@ -243,14 +259,17 @@ public:
       auto amtToMove = move.speed * secsElapsed;
       auto newPosition = currentPosition + amtToMove;
 
-      if ( (move.speed > 0 && newPosition >= targetAngle) ||
-         (move.speed < 0 && newPosition <= targetAngle) )
+      if ( animTimeElapsed >= move.duration )
       {
-         newPosition = targetAngle;
          currentMoveIndex++;
+         startMoveTime = millis();
+         MoveTo( targetAngle );
+      }
+      else
+      {
+         MoveTo( newPosition );
       }
 
-      moveTo( newPosition );
       lastTime = currentTime;
 
       return false;
@@ -262,6 +281,30 @@ ServoSpeedController* _yawServo;
 ServoAngleController* _pitchServo;
 
 bool _playing = false;
+
+void SetResetRoutine()
+{
+   _rollServo->Reset();
+   _yawServo->Reset();
+   _pitchServo->Reset();
+
+   DanceSpeedMove rollMoves[] =
+   {
+   };
+
+   DanceSpeedMove yawMoves[] =
+   {
+   };
+
+   DanceAngleMove pitchMoves[] =
+   {
+       DanceAngleMove( 93, 1000 ),
+   };
+
+   _rollServo->SetDanceMoves( rollMoves, sizeof( rollMoves ) / sizeof( DanceSpeedMove ) );
+   _yawServo->SetDanceMoves( yawMoves, sizeof( yawMoves ) / sizeof( DanceSpeedMove ) );
+   _pitchServo->SetDanceMoves( pitchMoves, sizeof( pitchMoves ) / sizeof( DanceAngleMove ) );
+}
 
 void SetDanceRoutine1()
 {
@@ -308,21 +351,21 @@ void SetDanceRoutine2()
 
    DanceSpeedMove rollMoves[] =
    {
-      //DanceSpeedMove( 5000, .4 ),
-      //DanceSpeedMove( 5000, -.4 ),
+      DanceSpeedMove( 5000, .4 ),
+      DanceSpeedMove( 5000, -.4 ),
    };
 
    DanceSpeedMove yawMoves[] =
    {
-      //DanceSpeedMove( 500, .2 ),
-      //DanceSpeedMove( 500, -.2 ),
+      DanceSpeedMove( 500, .2 ),
+      DanceSpeedMove( 500, -.2 ),
    };
 
    DanceAngleMove pitchMoves[] =
    {
        DanceAngleMove( 150, 1000 ),
        DanceAngleMove( 35, 2000 ),
-       DanceAngleMove( 150, 5000 ),
+       DanceAngleMove( 150, 1000 ),
    };
 
    _rollServo->SetDanceMoves( rollMoves, sizeof( rollMoves ) / sizeof( DanceSpeedMove ) );
@@ -345,9 +388,9 @@ void loop()
 {
    if ( _playing )
    {
-      auto donePlaying = _rollServo->update();
-      donePlaying &= _yawServo->update();
-      donePlaying &= _pitchServo->update();
+      auto donePlaying = _rollServo->Update();
+      donePlaying &= _yawServo->Update();
+      donePlaying &= _pitchServo->Update();
 
       _playing = !donePlaying;
    }
@@ -378,10 +421,8 @@ void loop()
          }
          case ok:
          {
-            _playing = false;
-            _rollServo->Reset();
-            _yawServo->Reset();
-            _pitchServo->Reset();
+            _playing = true;
+            SetResetRoutine();
          }
       }
    }
