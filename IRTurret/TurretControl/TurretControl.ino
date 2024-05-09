@@ -3,7 +3,7 @@
 #include "PinDefinitionsAndMore.h"
 #include <IRremote.hpp>
 
-#define RECOIL_FIRE_AMOUNT 5 // This is how much the pitch servo moves 3 times for recoil with a 50ms delay
+#define RECOIL_FIRE_AMOUNT 8 // This is how much the pitch servo moves 3 times for recoil with a 50ms delay
 
 #define DECODE_NEC // Defines the type of IR transmission to decode based on the remote. See IRremote library for examples on how to decode other types of remote
 
