@@ -42,6 +42,8 @@ int rollStopSpeed = 90; //value to stop the roll motor - keep this at 90
 int pitchMax = 175; // this sets the maximum angle of the pitch servo to prevent it from crashing, it should remain below 180, and be greater than the pitchMin
 int pitchMin = 10; // this sets the minimum angle of the pitch servo to prevent it from crashing, it should remain above 0, and be less than the pitchMax
 
+bool isPlaying = false;
+
 void shakeHeadYes( int moves = 3 )
 {
    int startAngle = pitchServoVal; // Current position of the pitch servo
@@ -156,18 +158,33 @@ void loop()
          }
          case ok:
          {
-            fire();
+            if ( !isPlaying )
+            {
+               isPlaying = true;
+               fire();
+               isPlaying = false;
+            }
             break;
          }
          case star:
          {
-            fireAll();
-            delay( 50 );
+            if ( !isPlaying )
+            {
+               isPlaying = true;
+               fireAll();
+               delay( 50 );
+               isPlaying = false;
+            }
             break;
          }
          case hashtag:
          {
-            spinAndFire();
+            if ( !isPlaying )
+            {
+               isPlaying = true;
+               spinAndFire();
+               isPlaying = false;
+            }
             break;
          }
          default:
