@@ -8,7 +8,7 @@ Easily make dance routines for the turret to perform. Documentation and examples
 
 ## [TurretRoulette](TurretRoulette)
 
-This is mostly the provided sample project for te roulette game.
+This is mostly the provided sample project for the roulette game.
 - Turret shakes head "yes" if it decides to shoot you
 - Turret shakes head "no" if it decides to not shoot you
   - Turret will sometimes lie and actually still shoot
