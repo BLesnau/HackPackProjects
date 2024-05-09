@@ -2,6 +2,21 @@
 #include "PinDefinitionsAndMore.h"
 #include <IRremote.hpp>
 
+#define ROLL_SERVO_PIN  12    // Pin for roll servo
+#define ROLL_ZERO_SPEED 90    // Speed to keep roll servo stationary
+#define ROLL_MIN_SPEED  45    // Minimum speed away from zero speed needed to get roll servo moving
+#define ROLL_MAX_SPEED  90    // Maximum speed away from zero speed allowed for roll servo
+
+#define YAW_SERVO_PIN   10    // Pin for yaw servo
+#define YAW_ZERO_SPEED  90    // Speed to keep yaw servo stationary
+#define YAW_MIN_SPEED   45    // Minimum speed away from zero speed needed to get yaw servo moving
+#define YAW_MAX_SPEED   90    // Maximum speed away from zero speed allowed for yaw servo
+
+#define PITCH_SERVO_PIN 11    // Pin for pitch servo
+#define PITCH_MIN_ANGLE 35    // Lowest angle (degrees) allowed for pitch servo
+#define PITCH_MAX_ANGLE 170   // Highest angle (degrees) allowed for pitch servo
+#define PITCH_MAX_SPEED 300   // Highest speed (degrees/sec) allowed for pitch servo
+
 #define DECODE_NEC // Defines the type of IR transmission to decode based on the remote. See IRremote library for examples on how to decode other types of remote
 
 // Codes for buttons on remote
@@ -108,8 +123,8 @@ protected:
 // and rotates 360 degrees. This is for the roll and yaw servos.
 // pin: Arduino pin for servo
 // zeroSpd: Speed that is used to keep servo stationary
-// minSpd: Minimum speed needed to get servo moving. You may need to experient for your own values
-// maxSpd: Maximum speed needed to get servo moving. You may need to experient for your own values
+// minSpd: Minimum speed away from zeroSpd needed to get servo moving. You may need to experient for your own values
+// maxSpd: Maximum speed away from zeroSpd needed to get servo moving. You may need to experient for your own values
 // moveArray: Array of dance moves to perform
 class ServoSpeedController : ServoController
 {
@@ -387,9 +402,9 @@ void setup()
 {
    Serial.begin( 115200 );
 
-   _rollServo = new ServoSpeedController( 12, 90, 45, 90 );
-   _yawServo = new ServoSpeedController( 10, 90, 45, 90 );
-   _pitchServo = new ServoAngleController( 11, 35, 170, 300 );
+   _rollServo = new ServoSpeedController( ROLL_SERVO_PIN, ROLL_ZERO_SPEED, ROLL_MIN_SPEED, ROLL_MAX_SPEED );
+   _yawServo = new ServoSpeedController( YAW_SERVO_PIN, YAW_ZERO_SPEED, YAW_MIN_SPEED, YAW_MAX_SPEED );
+   _pitchServo = new ServoAngleController( PITCH_SERVO_PIN, PITCH_MIN_ANGLE, PITCH_MAX_ANGLE, PITCH_MAX_SPEED );
 
    IrReceiver.begin( 9, ENABLE_LED_FEEDBACK );
 }
@@ -432,6 +447,9 @@ void loop()
          case ok:
          {
             _playing = false;
+            _rollServo->Reset();
+            _yawServo->Reset();
+            _pitchServo->Reset();
          }
       }
    }
