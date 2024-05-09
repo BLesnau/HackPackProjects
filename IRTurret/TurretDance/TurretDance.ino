@@ -276,27 +276,24 @@ public:
 
       auto amtToMove = move.speed * secsElapsed;
       auto newPosition = currentPosition + amtToMove;
-
-      if ( animTimeElapsed >= move.duration )
+      if ( move.speed < 0 )
       {
-         if ( !move.isWaitMove )
-         {
-            Serial.print( "Before:" );
-            Serial.println( currentPosition );
-            MoveTo( targetAngle );
-            Serial.print( "After:" );
-            Serial.println( currentPosition );
-         }
-
-         currentMoveIndex++;
-         startMoveTime = millis();
+         newPosition = max( targetAngle, newPosition );
       }
       else
       {
-         if ( !move.isWaitMove )
-         {
-            MoveTo( newPosition );
-         }
+         newPosition = min( targetAngle, newPosition );
+      }
+
+      if ( animTimeElapsed >= move.duration )
+      {
+         currentMoveIndex++;
+         startMoveTime = millis();
+      }
+
+      if ( !move.isWaitMove )
+      {
+         MoveTo( newPosition );
       }
 
       lastTime = currentTime;
@@ -392,7 +389,7 @@ void setup()
 
    _rollServo = new ServoSpeedController( 12, 90, 45, 90 );
    _yawServo = new ServoSpeedController( 10, 90, 45, 90 );
-   _pitchServo = new ServoAngleController( 11, 35, 170, 100 );
+   _pitchServo = new ServoAngleController( 11, 35, 170, 300 );
 
    IrReceiver.begin( 9, ENABLE_LED_FEEDBACK );
 }
