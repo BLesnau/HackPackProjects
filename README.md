@@ -8,4 +8,4 @@ I just want to make fun changes without worrying too much about the code quality
 
 - Sample projects like Roulette and general turret control
 - TurretDance to easily make dance routines for the turret to perform
-- Combine all of the projects into one file so that you can switch between all of them without deploying the code repeatedly.
+- (Not Implemented) Combine all of the projects into one file so that you can switch between all of them without deploying the code repeatedly.

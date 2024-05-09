@@ -18,6 +18,6 @@ This is mostly the provided sample project for te roulette game.
 
 This is mostly the provided sample project for controlling the turret. You can also have the turret animate with recoil after firing.
 
-## [TurretCombined](TurretCombined)
+## [(Not Implemented) TurretCombined](TurretCombined)
 
 All turret prejects are combined into a single file and can be switched to with commands like `0->1` or `0->2`
