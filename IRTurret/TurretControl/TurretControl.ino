@@ -3,6 +3,8 @@
 #include "PinDefinitionsAndMore.h"
 #include <IRremote.hpp>
 
+#define RECOIL_FIRE_AMOUNT 5 // This is how much the pitch servo moves 3 times for recoil with a 50ms delay
+
 #define DECODE_NEC // Defines the type of IR transmission to decode based on the remote. See IRremote library for examples on how to decode other types of remote
 
 // Codes for buttons on remote
@@ -43,7 +45,6 @@ int rollPrecision = 158; // this variable represents the time in milliseconds th
 
 int pitchMax = 175; // this sets the maximum angle of the pitch servo to prevent it from crashing, it should remain below 180, and be greater than the pitchMin
 int pitchMin = 10; // this sets the minimum angle of the pitch servo to prevent it from crashing, it should remain above 0, and be less than the pitchMax
-
 
 void setup()
 {
@@ -203,11 +204,42 @@ void downMove( int moves )
    }
 }
 
+void doRecoil()
+{
+   if ( RECOIL_FIRE_AMOUNT != 0 )
+   {
+      auto origPitchVal = pitchServoVal;
+
+      for ( auto i = 0; i < 3; i++ )
+      {
+         pitchServoVal += RECOIL_FIRE_AMOUNT;
+         pitchServoVal = min( pitchServoVal, pitchMax );
+         pitchServoVal = max( pitchServoVal, pitchMin );
+         pitchServo.write( pitchServoVal );
+         delay( 50 );
+      }
+
+      for ( auto i = 0; i < 3; i++ )
+      {
+         pitchServoVal -= RECOIL_FIRE_AMOUNT;
+         pitchServoVal = min( pitchServoVal, pitchMax );
+         pitchServoVal = max( pitchServoVal, pitchMin );
+         pitchServo.write( pitchServoVal );
+         delay( 50 );
+      }
+
+      pitchServo.write( origPitchVal );
+   }
+}
+
 void fire()
 {
    rollServo.write( rollStopSpeed + rollMoveSpeed );//start rotating the servo
    delay( rollPrecision );//time for approximately 60 degrees of rotation
    rollServo.write( rollStopSpeed );//stop rotating the servo
+
+   doRecoil();
+
    delay( 5 ); //delay for smoothness
 }
 
@@ -216,6 +248,9 @@ void fireAll()
    rollServo.write( rollStopSpeed + rollMoveSpeed );//start rotating the servo
    delay( rollPrecision * 6 ); //time for 360 degrees of rotation
    rollServo.write( rollStopSpeed );//stop rotating the servo
+
+   doRecoil();
+
    delay( 5 ); // delay for smoothness
 }
 

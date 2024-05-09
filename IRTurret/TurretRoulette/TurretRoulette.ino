@@ -2,6 +2,7 @@
 #include <Servo.h>
 #include <IRremote.hpp>
 
+#define RECOIL_FIRE_AMOUNT 5 // This is how much the pitch servo moves 3 times for recoil with a 50ms delay
 
 #define DECODE_NEC // Defines the type of IR transmission to decode based on the remote. See IRremote library for examples on how to decode other types of remote
 
@@ -37,6 +38,9 @@ int yawMoveSpeed = 90; //this variable is the speed controller for the continuou
 int yawStopSpeed = 90; //value to stop the yaw motor - keep this at 90
 int rollMoveSpeed = 90; //this variable is the speed controller for the continuous movement of the ROLL servo motor. It is added or subtracted from the rollStopSpeed, so 0 would mean full speed rotation in one direction, and 180 means full rotation in the other. Keep this at 90 for best performance / highest torque from the roll motor when firing.
 int rollStopSpeed = 90; //value to stop the roll motor - keep this at 90
+
+int pitchMax = 175; // this sets the maximum angle of the pitch servo to prevent it from crashing, it should remain below 180, and be greater than the pitchMin
+int pitchMin = 10; // this sets the minimum angle of the pitch servo to prevent it from crashing, it should remain above 0, and be less than the pitchMax
 
 void shakeHeadYes( int moves = 3 )
 {
@@ -173,6 +177,34 @@ void loop()
       }
    }
    delay( 5 );
+}
+
+void doRecoil()
+{
+   if ( RECOIL_FIRE_AMOUNT != 0 )
+   {
+      auto origPitchVal = pitchServoVal;
+
+      for ( auto i = 0; i < 3; i++ )
+      {
+         pitchServoVal += RECOIL_FIRE_AMOUNT;
+         pitchServoVal = min( pitchServoVal, pitchMax );
+         pitchServoVal = max( pitchServoVal, pitchMin );
+         pitchServo.write( pitchServoVal );
+         delay( 50 );
+      }
+
+      for ( auto i = 0; i < 3; i++ )
+      {
+         pitchServoVal -= RECOIL_FIRE_AMOUNT;
+         pitchServoVal = min( pitchServoVal, pitchMax );
+         pitchServoVal = max( pitchServoVal, pitchMin );
+         pitchServo.write( pitchServoVal );
+         delay( 50 );
+      }
+
+      pitchServo.write( origPitchVal );
+   }
 }
 
 void fire()
