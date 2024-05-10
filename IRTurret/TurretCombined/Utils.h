@@ -1,0 +1,18 @@
+// Codes for buttons on remote
+#define left 0x8
+#define right 0x5A
+#define up 0x52
+#define down 0x18
+#define ok 0x1C
+#define cmd1 0x45
+#define cmd2 0x46
+#define cmd3 0x47
+#define cmd4 0x44
+#define cmd5 0x40
+#define cmd6 0x43
+#define cmd7 0x7
+#define cmd8 0x15
+#define cmd9 0x9
+#define cmd0 0x19
+#define star 0x16
+#define hashtag 0xD
