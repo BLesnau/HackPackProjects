@@ -3,14 +3,28 @@
 #include "TurretRoulette.h"
 #include "TurretDance.h"
 #include "Utils.h"
+#include "BaseProgram.h"
 #include <IRremote.hpp>
 
 #define DECODE_NEC // Defines the type of IR transmission to decode based on the remote. See IRremote library for examples on how to decode other types of remote
 
 enum ProgramType { TurretControl, TurretRoulette, TurretDance };
 
-ProgramType currentProgram = ProgramType::TurretControl;
+struct ProgramPair {
+   ProgramType type;
+   BaseProgram* program;
+};
+
+ProgramPair programs[] =
+{
+    { TurretControl, new TurretControlProgram() },
+    { TurretRoulette, new TurretRouletteProgram() },
+    { TurretDance, new TurretDanceProgram() }
+};
+
 bool isSelectingProgram = false;
+
+BaseProgram* currentProgram = nullptr;
 
 void setup()
 {
@@ -18,76 +32,70 @@ void setup()
 
    IrReceiver.begin( 9, ENABLE_LED_FEEDBACK );
 
-   ControlSetup();
+   currentProgram = GetProgram( TurretControl );
+
+   SetupProgram();
 }
 
-bool CanChangeProgram()
+BaseProgram* GetProgram( ProgramType type )
 {
-   if ( currentProgram == ProgramType::TurretControl )
+   for ( int i = 0; i < sizeof( programs ) / sizeof( programs[0] ); i++ )
    {
-      return ControlCanChangeProgram();
-   }
-   if ( currentProgram == ProgramType::TurretRoulette )
-   {
-      return RouletteCanChangeProgram();
-   }
-   if ( currentProgram == ProgramType::TurretDance )
-   {
-      return DanceCanChangeProgram();
+      if ( programs[i].type == type )
+      {
+         return programs[i].program;
+         break;
+      }
    }
 
-   return true;
+   return nullptr;
 }
 
-void ChangeProgram( ProgramType newProgram )
+void SetupProgram()
 {
-   if ( CanChangeProgram() )
+   if ( currentProgram != nullptr )
    {
-      if ( currentProgram == ProgramType::TurretControl )
+      currentProgram->Setup();
+   }
+}
+
+bool CanShutdownProgram()
+{
+   if ( currentProgram != nullptr )
+   {
+      return currentProgram->CanShutdown();
+   }
+}
+
+void ShutdownProgram()
+{
+   if ( currentProgram != nullptr )
+   {
+      currentProgram->Shutdown();
+   }
+}
+
+void ChangeProgram( ProgramType newProgramType )
+{
+   if ( CanShutdownProgram() )
+   {
+      auto newProgram = GetProgram( newProgramType );
+
+      if ( newProgram != nullptr )
       {
-         ControlShutdown();
-      }
-      if ( currentProgram == ProgramType::TurretRoulette )
-      {
-         RouletteShutdown();
-      }
-      if ( currentProgram == ProgramType::TurretDance )
-      {
-         DanceShutdown();
+         currentProgram->Shutdown();
+
+         currentProgram = newProgram;
+         currentProgram->Setup();
       }
 
-      if ( newProgram == ProgramType::TurretControl )
-      {
-         ControlSetup();
-      }
-      if ( newProgram == ProgramType::TurretRoulette )
-      {
-         RouletteSetup();
-      }
-      if ( newProgram == ProgramType::TurretDance )
-      {
-         DanceSetup();
-      }
-
-      currentProgram = newProgram;
       isSelectingProgram = false;
    }
 }
 
 void ProgramLoop( uint16_t cmd )
 {
-   if ( currentProgram == ProgramType::TurretControl )
-   {
-      return ControlLoop( cmd );
-   }
-   if ( currentProgram == ProgramType::TurretRoulette )
-   {
-      return RouletteLoop( cmd );
-   }
-   if ( currentProgram == ProgramType::TurretDance )
-   {
-      return DanceLoop( cmd );
-   }
+   currentProgram->Loop( cmd );
 }
 
 void loop()
@@ -100,7 +108,7 @@ void loop()
       {
          case cmd0:
          {
-            if ( !isSelectingProgram && CanChangeProgram() )
+            if ( !isSelectingProgram && CanShutdownProgram() )
             {
                isSelectingProgram = true;
             }
