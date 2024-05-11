@@ -18,6 +18,6 @@ This is mostly the provided sample project for the roulette game.
 
 This is mostly the provided sample project for controlling the turret. You can also have the turret animate with recoil after firing.
 
-## [(Not Implemented) TurretCombined](TurretCombined)
+## [(TurretCombined](TurretCombined)
 
-All turret prejects are combined into a single file and can be switched to with commands like `0->1` or `0->2`
+All turret projects are combined into a single project and can be switched to with commands like `0->1` or `0->2`. The project is split up into multiple files, so you will not be able to use the HackPack web-based code editor. You will need to you use a different editor like the Arduino IDE or Visual Studio Code.
