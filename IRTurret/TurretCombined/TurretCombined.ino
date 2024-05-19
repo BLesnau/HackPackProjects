@@ -17,9 +17,9 @@ struct ProgramPair {
 
 ProgramPair programs[] =
 {
-    { TurretControl, new TurretControlProgram() },
-    { TurretRoulette, new TurretRouletteProgram() },
-    { TurretDance, new TurretDanceProgram() }
+   //{ TurretControl, new TurretControlProgram() },
+   //{ TurretRoulette, new TurretRouletteProgram() },
+   { TurretDance, new TurretDanceProgram() }
 };
 
 bool isSelectingProgram = false;
@@ -32,7 +32,7 @@ void setup()
 
    IrReceiver.begin( 9, ENABLE_LED_FEEDBACK );
 
-   currentProgram = GetProgram( TurretControl );
+   currentProgram = GetProgram( TurretDance );
 
    SetupProgram();
 }

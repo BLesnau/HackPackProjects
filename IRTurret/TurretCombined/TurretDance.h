@@ -29,6 +29,9 @@ public:
       _rollServo = new ServoSpeedController( ROLL_SERVO_PIN, ROLL_ZERO_SPEED, ROLL_MIN_SPEED, ROLL_MAX_SPEED );
       _yawServo = new ServoSpeedController( YAW_SERVO_PIN, YAW_ZERO_SPEED, YAW_MIN_SPEED, YAW_MAX_SPEED );
       _pitchServo = new ServoAngleController( PITCH_SERVO_PIN, PITCH_MIN_ANGLE, PITCH_MAX_ANGLE, PITCH_MAX_SPEED );
+
+      SetDanceRoutine1();
+      _playing = true;
    }
 
    void Loop( uint16_t cmd ) override
@@ -89,7 +92,6 @@ public:
       delete _pitchServo;
    }
 
-
 private:
    ServoSpeedController* _rollServo;
    ServoSpeedController* _yawServo;
@@ -103,34 +105,69 @@ private:
       _yawServo->Reset();
       _pitchServo->Reset();
 
+      uint8_t topPitch = 110;
+      uint8_t bottomPitch = 90;
+      uint8_t yu = 20;
+      uint8_t ru = 10;
+      uint16_t du = 100;
+
       DanceSpeedMove rollMoves[] =
       {
-         DanceSpeedMove( 3000 ),
-         DanceSpeedMove( 2000, .4 ),
-         DanceSpeedMove( 2000, -.4 ),
-         DanceSpeedMove( 2000, .4 ),
-         DanceSpeedMove( 2000, -.4 ),
+         // DanceSpeedMove( 40 * du ),
+         // DanceSpeedMove( 2000, .4 ),
+         // DanceSpeedMove( 2000, -.4 ),
+         // DanceSpeedMove( 2000, .4 ),
+         // DanceSpeedMove( 2000, -.4 ),
       };
 
       DanceSpeedMove yawMoves[] =
       {
-         DanceSpeedMove( 3000 ),
-         DanceSpeedMove( 500, .2 ),
-         DanceSpeedMove( 500, -.2 ),
-         DanceSpeedMove( 500, .2 ),
-         DanceSpeedMove( 500, -.2 ),
+         DanceSpeedMove( 40 * du ),
+         DanceSpeedMove( 4 * du ),
+         DanceSpeedMove( du, 4 * yu ),
+         DanceSpeedMove( 9 * du ),
+         DanceSpeedMove( du, -4 * yu ),
+         DanceSpeedMove( 9 * du ),
+         DanceSpeedMove( du, 4 * yu ),
+         DanceSpeedMove( 9 * du ),
+         DanceSpeedMove( du, -4 * yu ),
+         DanceSpeedMove( 9 * du ),
+         DanceSpeedMove( du, 4 * yu ),
+         DanceSpeedMove( 9 * du ),
+         DanceSpeedMove( du, -4 * yu ),
+         DanceSpeedMove( 9 * du ),
+         DanceSpeedMove( du, 4 * yu ),
+         DanceSpeedMove( 9 * du ),
       };
 
       DanceAngleMove pitchMoves[] =
       {
-         DanceAngleMove( 93, 1000 ),
-         DanceAngleMove( 2000 ),
-         DanceAngleMove( 150, 1000 ),
-         DanceAngleMove( 35, 2000 ),
-         DanceAngleMove( 150, 1000 ),
-         DanceAngleMove( 150, 1000 ),
-         DanceAngleMove( 35, 2000 ),
-         DanceAngleMove( 150, 1000 ),
+         DanceAngleMove( topPitch, 10 * du ),
+         DanceAngleMove( 30 * du ),
+         DanceAngleMove( bottomPitch, 4 * du ),
+         DanceAngleMove( topPitch, du ),
+         DanceAngleMove( 5 * du ),
+         DanceAngleMove( bottomPitch, 4 * du ),
+         DanceAngleMove( topPitch, du ),
+         DanceAngleMove( 5 * du ),
+         DanceAngleMove( bottomPitch, 4 * du ),
+         DanceAngleMove( topPitch, du ),
+         DanceAngleMove( 5 * du ),
+         DanceAngleMove( bottomPitch, 4 * du ),
+         DanceAngleMove( topPitch, du ),
+         DanceAngleMove( 5 * du ),
+         DanceAngleMove( bottomPitch, 4 * du ),
+         DanceAngleMove( topPitch, du ),
+         DanceAngleMove( 5 * du ),
+         DanceAngleMove( bottomPitch, 4 * du ),
+         DanceAngleMove( topPitch, du ),
+         DanceAngleMove( 5 * du ),
+         DanceAngleMove( bottomPitch, 4 * du ),
+         DanceAngleMove( topPitch, du ),
+         DanceAngleMove( 5 * du ),
+         DanceAngleMove( bottomPitch, 4 * du ),
+         DanceAngleMove( topPitch, du ),
+         DanceAngleMove( 5 * du ),
       };
 
       _rollServo->SetDanceMoves( rollMoves, sizeof( rollMoves ) / sizeof( DanceSpeedMove ) );

@@ -1,8 +1,8 @@
 struct DanceMove
 {
 public:
-   unsigned long duration;
-   double speed;
+   uint16_t duration;
+   int8_t speed;
    bool started = false;
    bool isWaitMove = false;
 };
@@ -17,13 +17,13 @@ struct DanceSpeedMove : DanceMove
 public:
    DanceSpeedMove() {}
 
-   DanceSpeedMove( unsigned long dur, double spd )
+   DanceSpeedMove( uint16_t dur, int8_t spd )
    {
       duration = dur;
-      speed = max( -1, min( spd, 1 ) );
+      speed = max( -100, min( spd, 100 ) );
    }
 
-   DanceSpeedMove( unsigned long dur )
+   DanceSpeedMove( uint16_t dur )
    {
       duration = dur;
       isWaitMove = true;
@@ -38,17 +38,17 @@ public:
 struct DanceAngleMove : DanceMove
 {
 public:
-   int targetAngle;
+   uint8_t targetAngle;
 
    DanceAngleMove() {}
 
-   DanceAngleMove( int targetAng, unsigned long dur )
+   DanceAngleMove( uint8_t targetAng, uint16_t dur )
       : targetAngle( targetAng )
    {
       duration = dur;
    }
 
-   DanceAngleMove( unsigned long dur )
+   DanceAngleMove( uint16_t dur )
    {
       duration = dur;
       isWaitMove = true;
