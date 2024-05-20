@@ -38,17 +38,11 @@
 #define star 0x16
 #define hashtag 0xD
 
-// Map a ration to a range. For example, .5 should fall in the middle of a range if the input can be 0-1
-double mapDouble( double x, double in_min, double in_max, double out_min, double out_max )
-{
-   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
 struct DanceMove
 {
 public:
-   unsigned long duration;
-   double speed;
+   uint16_t duration;
+   int8_t speed;
    bool started = false;
    bool isWaitMove = false;
 };
@@ -63,13 +57,13 @@ struct DanceSpeedMove : DanceMove
 public:
    DanceSpeedMove() {}
 
-   DanceSpeedMove( unsigned long dur, double spd )
+   DanceSpeedMove( uint16_t dur, int8_t spd )
    {
       duration = dur;
-      speed = max( -1, min( spd, 1 ) );
+      speed = max( -100, min( spd, 100 ) );
    }
 
-   DanceSpeedMove( unsigned long dur )
+   DanceSpeedMove( uint16_t dur )
    {
       duration = dur;
       isWaitMove = true;
@@ -84,17 +78,17 @@ public:
 struct DanceAngleMove : DanceMove
 {
 public:
-   int targetAngle;
+   uint8_t targetAngle;
 
    DanceAngleMove() {}
 
-   DanceAngleMove( int targetAng, unsigned long dur )
+   DanceAngleMove( uint8_t targetAng, uint16_t dur )
       : targetAngle( targetAng )
    {
       duration = dur;
    }
 
-   DanceAngleMove( unsigned long dur )
+   DanceAngleMove( uint16_t dur )
    {
       duration = dur;
       isWaitMove = true;
@@ -109,14 +103,14 @@ public:
 
 protected:
    Servo servo;
-   int numMoves = 0;
-   int currentMoveIndex = 0;
-   unsigned long startMoveTime;
-   unsigned long lastTime;
-   double currentPosition;
-   int maxSpeed;
+   uint16_t numMoves = 0;
+   uint16_t currentMoveIndex = 0;
+   uint16_t startMoveTime;
+   uint16_t lastTime;
+   uint8_t currentPosition;
+   uint16_t maxSpeed;
 
-   virtual void MoveTo( double position ) = 0;
+   virtual void MoveTo( uint8_t position ) = 0;
 };
 
 // Controller to define properties for a servo that lets you set the speed
@@ -130,24 +124,29 @@ class ServoSpeedController : ServoController
 {
 private:
    DanceSpeedMove* moves = nullptr;
-   int zeroSpeed;
-   int minSpeed;
+   uint8_t zeroSpeed;
+   uint8_t minSpeed;
 
-   void MoveTo( double position ) override
+   void MoveTo( uint8_t position ) override
    {
       servo.write( position );
       currentPosition = position;
    }
 
 public:
-   ServoSpeedController( int pin, int zeroSpd, int minSpd, int maxSpd )
+   ServoSpeedController( uint8_t pin, uint8_t zeroSpd, uint8_t minSpd, uint8_t maxSpd )
       : zeroSpeed( zeroSpd ), minSpeed( minSpd )
    {
       maxSpeed = maxSpd;
       servo.attach( pin );
    }
 
-   void SetDanceMoves( DanceSpeedMove moveArray[], int moveCount )
+   ~ServoSpeedController()
+   {
+      servo.detach();
+   }
+
+   void SetDanceMoves( DanceSpeedMove moveArray[], uint16_t moveCount )
    {
       Reset();
       moves = new DanceSpeedMove[moveCount];
@@ -177,23 +176,23 @@ public:
          return true;
       }
 
-      unsigned long currentTime = millis();
+      uint16_t currentTime = millis();
       DanceSpeedMove& move = moves[currentMoveIndex];
-      unsigned long timeElapsed = currentTime - lastTime;
-      unsigned long animTimeElapsed = currentTime - startMoveTime;
+      uint16_t timeElapsed = currentTime - lastTime;
+      uint16_t animTimeElapsed = currentTime - startMoveTime;
 
       if ( !move.started )
       {
          move.started = true;
 
-         double speed = zeroSpeed;
+         uint8_t speed = zeroSpeed;
          if ( move.speed > 0 )
          {
-            speed = mapDouble( move.speed, 0, 1, zeroSpeed + minSpeed, zeroSpeed + maxSpeed );
+            speed = map( move.speed, 0, 100, zeroSpeed + minSpeed, zeroSpeed + maxSpeed );
          }
          else if ( move.speed < 0 )
          {
-            speed = mapDouble( move.speed, -1, 0, zeroSpeed - maxSpeed, zeroSpeed - minSpeed );
+            speed = map( move.speed, -1, 0, zeroSpeed - maxSpeed, zeroSpeed - minSpeed );
          }
 
          if ( !move.isWaitMove )
@@ -220,16 +219,16 @@ public:
 // pin: Arduino pin for servo
 // minAng: Minimum angle allowed. Prevents rotating too much in one direction.
 // maxAng: Maximum angle allowed. Prevents rotating too much in one direction.
-// maxSpde: Maximum degrees/sec movement allowed
+// maxSpd: Maximum degrees/sec movement allowed
 // moveArray: Array of dance moves to perform
 class ServoAngleController : ServoController
 {
 private:
    DanceAngleMove* moves = nullptr;
-   int minAngle;
-   int maxAngle;
+   uint8_t minAngle;
+   uint8_t maxAngle;
 
-   void MoveTo( double position ) override
+   void MoveTo( uint8_t position ) override
    {
       position = max( minAngle, min( maxAngle, position ) );
       servo.write( position );
@@ -237,13 +236,18 @@ private:
    }
 
 public:
-   ServoAngleController( int pin, int minAng, int maxAng, int maxSpd )
+   ServoAngleController( uint8_t pin, uint8_t minAng, uint8_t maxAng, uint16_t maxSpd )
       : minAngle( minAng ), maxAngle( maxAng )
    {
       maxSpeed = maxSpd;
       servo.attach( pin );
 
       MoveTo( minAngle + (double( maxAngle - minAngle ) / 2.0) );
+   }
+
+   ~ServoAngleController()
+   {
+      servo.detach();
    }
 
    void SetDanceMoves( DanceAngleMove moveArray[], int moveCount )
@@ -286,18 +290,39 @@ public:
       {
          move.started = true;
          move.speed = ((double)targetAngle - currentPosition) / ((double)move.duration / 1000.0);
-         move.speed = min( maxSpeed, move.speed );
+
+         auto spd = move.speed;
+         if ( move.speed < 0 )
+         {
+            move.speed = max( -maxSpeed, move.speed );
+         }
+         else
+         {
+            move.speed = min( maxSpeed, move.speed );
+         }
       }
 
-      auto amtToMove = move.speed * secsElapsed;
-      auto newPosition = currentPosition + amtToMove;
-      if ( move.speed < 0 )
+      auto amtToMove = (double)move.speed * secsElapsed;
+
+      auto minMove = 1;
+      if ( (amtToMove >= minMove) || (animTimeElapsed >= move.duration) )
       {
-         newPosition = max( targetAngle, newPosition );
-      }
-      else
-      {
-         newPosition = min( targetAngle, newPosition );
+         auto newPosition = currentPosition + amtToMove;
+         if ( move.speed < 0 )
+         {
+            newPosition = max( targetAngle, newPosition );
+         }
+         else
+         {
+            newPosition = min( targetAngle, newPosition );
+         }
+
+         if ( !move.isWaitMove )
+         {
+            MoveTo( newPosition );
+         }
+
+         lastTime = currentTime;
       }
 
       if ( animTimeElapsed >= move.duration )
@@ -305,13 +330,6 @@ public:
          currentMoveIndex++;
          startMoveTime = millis();
       }
-
-      if ( !move.isWaitMove )
-      {
-         MoveTo( newPosition );
-      }
-
-      lastTime = currentTime;
 
       return false;
    }
@@ -329,34 +347,63 @@ void SetDanceRoutine1()
    _yawServo->Reset();
    _pitchServo->Reset();
 
+   uint8_t topPitch = 110;
+   uint8_t bottomPitch = 90;
+   uint8_t yu = 20;
+   uint8_t ru = 10;
+   uint16_t du = 100;
+
    DanceSpeedMove rollMoves[] =
    {
-      DanceSpeedMove( 3000 ),
-      DanceSpeedMove( 2000, .4 ),
-      DanceSpeedMove( 2000, -.4 ),
-      DanceSpeedMove( 2000, .4 ),
-      DanceSpeedMove( 2000, -.4 ),
+      DanceSpeedMove( 108 * du ),      // 10.8
+      DanceSpeedMove( 40 * du, 50 ),
+      DanceSpeedMove( 40 * du, -50 ),
+      DanceSpeedMove( 40 * du, 50 ),
+      DanceSpeedMove( 40 * du, -50 ),
    };
 
    DanceSpeedMove yawMoves[] =
    {
-      DanceSpeedMove( 3000 ),
-      DanceSpeedMove( 500, .2 ),
-      DanceSpeedMove( 500, -.2 ),
-      DanceSpeedMove( 500, .2 ),
-      DanceSpeedMove( 500, -.2 ),
+      DanceSpeedMove( 40 * du ),          // 4
+      DanceSpeedMove( 4 * du ),           // 4.4
+      DanceSpeedMove( 2 * du, 4 * yu ),   // 4.8
+      DanceSpeedMove( 8 * du ),           // 5.7
+      DanceSpeedMove( 2 * du, -4 * yu ),  // 5.8
+      DanceSpeedMove( 8 * du ),           // 6.7
+      DanceSpeedMove( 2 * du, 4 * yu ),   // 6.8
+      DanceSpeedMove( 8 * du ),
+      DanceSpeedMove( 2 * du, -4 * yu ),  // 7.8
+      DanceSpeedMove( 8 * du ),
+      DanceSpeedMove( 2 * du, 4 * yu ),   // 8.8
+      DanceSpeedMove( 8 * du ),
+      DanceSpeedMove( 2 * du, -4 * yu ),  // 9.8
+      DanceSpeedMove( 8 * du ),
+      DanceSpeedMove( 2 * du, 4 * yu ),   // 10.8
    };
 
    DanceAngleMove pitchMoves[] =
    {
-      DanceAngleMove( 93, 1000 ),
-      DanceAngleMove( 2000 ),
-      DanceAngleMove( 150, 1000 ),
-      DanceAngleMove( 35, 2000 ),
-      DanceAngleMove( 150, 1000 ),
-      DanceAngleMove( 150, 1000 ),
-      DanceAngleMove( 35, 2000 ),
-      DanceAngleMove( 150, 1000 ),
+      DanceAngleMove( topPitch, 10 * du ),
+      DanceAngleMove( 30 * du ),                // 4
+      DanceAngleMove( bottomPitch, 4 * du ),    // 4.4
+      DanceAngleMove( topPitch, du ),           // 4.5
+      DanceAngleMove( 5 * du ),                 // 5
+      DanceAngleMove( bottomPitch, 4 * du ),
+      DanceAngleMove( topPitch, du ),
+      DanceAngleMove( 5 * du ),                 // 6
+      DanceAngleMove( bottomPitch, 4 * du ),
+      DanceAngleMove( topPitch, du ),
+      DanceAngleMove( 5 * du ),                 // 7
+      DanceAngleMove( bottomPitch, 4 * du ),
+      DanceAngleMove( topPitch, du ),
+      DanceAngleMove( 5 * du ),                 // 8
+      DanceAngleMove( bottomPitch, 4 * du ),
+      DanceAngleMove( topPitch, du ),
+      DanceAngleMove( 5 * du ),                 // 9
+      DanceAngleMove( bottomPitch, 4 * du ),
+      DanceAngleMove( topPitch, du ),
+      DanceAngleMove( 5 * du ),                 // 10
+      DanceAngleMove( bottomPitch, 8 * du ),  // 10.8
    };
 
    _rollServo->SetDanceMoves( rollMoves, sizeof( rollMoves ) / sizeof( DanceSpeedMove ) );
@@ -370,27 +417,142 @@ void SetDanceRoutine2()
    _yawServo->Reset();
    _pitchServo->Reset();
 
+   uint8_t topPitch = 120;
+   uint8_t bottomPitch = 80;
+   uint8_t yu = 20;
+   uint8_t ru = 10;
+   uint16_t du = 100;
+
    DanceSpeedMove rollMoves[] =
    {
-      DanceSpeedMove( 3000 ),
-      DanceSpeedMove( 2000, .4 ),
-      DanceSpeedMove( 2000, -.4 ),
    };
 
    DanceSpeedMove yawMoves[] =
    {
-      DanceSpeedMove( 3000 ),
-      DanceSpeedMove( 500, .2 ),
-      DanceSpeedMove( 500, -.2 ),
    };
 
    DanceAngleMove pitchMoves[] =
    {
-      DanceAngleMove( 93, 1000 ),
-      DanceAngleMove( 2000 ),
-      DanceAngleMove( 150, 1000 ),
-      DanceAngleMove( 35, 2000 ),
-      DanceAngleMove( 150, 1000 ),
+      DanceAngleMove( topPitch, 10 * du ),
+      DanceAngleMove( 30 * du ),
+      DanceAngleMove( bottomPitch, 2 * du ),
+      DanceAngleMove( topPitch, du ),
+      DanceAngleMove( 2 * du ),
+      DanceAngleMove( bottomPitch, 2 * du ),
+      DanceAngleMove( topPitch, du ),
+      DanceAngleMove( 2 * du ),
+      DanceAngleMove( bottomPitch, 2 * du ),
+      DanceAngleMove( topPitch, du ),
+      DanceAngleMove( 2 * du ),
+      DanceAngleMove( bottomPitch, 2 * du ),
+      DanceAngleMove( topPitch, du ),
+      DanceAngleMove( 2 * du ),
+      DanceAngleMove( bottomPitch, 2 * du ),
+      DanceAngleMove( topPitch, du ),
+      DanceAngleMove( 2 * du ),
+      DanceAngleMove( bottomPitch, 2 * du ),
+      DanceAngleMove( topPitch, du ),
+      DanceAngleMove( 2 * du ),
+      DanceAngleMove( bottomPitch, 2 * du ),
+      DanceAngleMove( topPitch, du ),
+      DanceAngleMove( 2 * du ),
+      DanceAngleMove( bottomPitch, 2 * du ),
+      DanceAngleMove( topPitch, du ),
+      DanceAngleMove( 2 * du ),
+      DanceAngleMove( bottomPitch, 2 * du ),
+      DanceAngleMove( topPitch, du ),
+      DanceAngleMove( 2 * du ),
+      DanceAngleMove( bottomPitch, 2 * du ),
+      DanceAngleMove( topPitch, du ),
+      DanceAngleMove( 2 * du ),
+      DanceAngleMove( bottomPitch, 2 * du ),
+      DanceAngleMove( topPitch, du ),
+      DanceAngleMove( 2 * du ),
+      DanceAngleMove( bottomPitch, 2 * du ),
+      DanceAngleMove( topPitch, du ),
+      DanceAngleMove( 2 * du ),
+      DanceAngleMove( bottomPitch, 2 * du ),
+      DanceAngleMove( topPitch, du ),
+      DanceAngleMove( 2 * du ),
+      DanceAngleMove( bottomPitch, 2 * du ),
+      DanceAngleMove( topPitch, du ),
+   };
+
+   _rollServo->SetDanceMoves( rollMoves, sizeof( rollMoves ) / sizeof( DanceSpeedMove ) );
+   _yawServo->SetDanceMoves( yawMoves, sizeof( yawMoves ) / sizeof( DanceSpeedMove ) );
+   _pitchServo->SetDanceMoves( pitchMoves, sizeof( pitchMoves ) / sizeof( DanceAngleMove ) );
+}
+
+void SetDanceRoutine4()
+{
+   _rollServo->Reset();
+   _yawServo->Reset();
+   _pitchServo->Reset();
+
+   uint8_t topPitch = 110;
+   uint8_t bottomPitch = 80;
+   uint8_t yu = 20;
+   uint8_t ru = 10;
+   uint16_t du = 100;
+
+   DanceSpeedMove rollMoves[] =
+   {
+   };
+
+   DanceSpeedMove yawMoves[] =
+   {
+      DanceSpeedMove( 34 * du ),
+      DanceSpeedMove( 6 * du, 4 * yu ),
+      DanceSpeedMove( du, 4 * yu ),
+      DanceSpeedMove( du, -4 * yu ),
+      DanceSpeedMove( du, 4 * yu ),
+      DanceSpeedMove( du, -4 * yu ),
+      DanceSpeedMove( du, 4 * yu ),
+      DanceSpeedMove( du, -4 * yu ),
+      DanceSpeedMove( du, 4 * yu ),
+      DanceSpeedMove( du, -4 * yu ),
+      DanceSpeedMove( du, 4 * yu ),
+      DanceSpeedMove( du, -4 * yu ),
+      DanceSpeedMove( du, 4 * yu ),
+      DanceSpeedMove( du, -4 * yu ),
+      DanceSpeedMove( du, 4 * yu ),
+      DanceSpeedMove( du, -4 * yu ),
+      DanceSpeedMove( du, 4 * yu ),
+      DanceSpeedMove( du, -4 * yu ),
+      DanceSpeedMove( du, 4 * yu ),
+      DanceSpeedMove( du, -4 * yu ),
+      DanceSpeedMove( du, 4 * yu ),
+      DanceSpeedMove( du, -4 * yu ),
+      DanceSpeedMove( 6 * du, -4 * yu ),
+      DanceSpeedMove( du, 4 * yu ),
+      DanceSpeedMove( du, -4 * yu ),
+      DanceSpeedMove( du, 4 * yu ),
+      DanceSpeedMove( du, -4 * yu ),
+      DanceSpeedMove( du, 4 * yu ),
+      DanceSpeedMove( du, -4 * yu ),
+      DanceSpeedMove( du, 4 * yu ),
+      DanceSpeedMove( du, -4 * yu ),
+      DanceSpeedMove( du, 4 * yu ),
+      DanceSpeedMove( du, -4 * yu ),
+      DanceSpeedMove( du, 4 * yu ),
+      DanceSpeedMove( du, -4 * yu ),
+      DanceSpeedMove( du, 4 * yu ),
+      DanceSpeedMove( du, -4 * yu ),
+      DanceSpeedMove( du, 4 * yu ),
+      DanceSpeedMove( du, -4 * yu ),
+      DanceSpeedMove( du, 4 * yu ),
+      DanceSpeedMove( du, -4 * yu ),
+      DanceSpeedMove( du, 4 * yu ),
+      DanceSpeedMove( du, -4 * yu ),
+   };
+
+   DanceAngleMove pitchMoves[] =
+   {
+      DanceAngleMove( topPitch, 10 * du ),
+      DanceAngleMove( 30 * du ),
+      DanceAngleMove( bottomPitch, 10 * du ),
+      DanceAngleMove( 186 * du ),
+      DanceAngleMove( topPitch, 10 * du ),
    };
 
    _rollServo->SetDanceMoves( rollMoves, sizeof( rollMoves ) / sizeof( DanceSpeedMove ) );
@@ -440,6 +602,15 @@ void loop()
             if ( !_playing )
             {
                SetDanceRoutine2();
+               _playing = true;
+            }
+            break;
+         }
+         case cmd4:
+         {
+            if ( !_playing )
+            {
+               SetDanceRoutine4();
                _playing = true;
             }
             break;

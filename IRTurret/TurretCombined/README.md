@@ -6,3 +6,7 @@ These button pressed switch between different functionality. The links are to th
 - `0->1` [TurretDance](../TurretDance)
 - `0->2` [TurretRoulette](../TurretRoulette)
 - `0->3` [TurretControl](../TurretControl)
+
+## Known Issues
+- TurretDance
+  - Memory space runs out pretty quickly because of the actual size of the code paired with the list of the dance moves. This limits the dances to something relatively short. It can be addressed in the future by only putting part of a dacne routine in memory, finishing that portion, deleting the objects for that portion, and then proceeding to the next portion. The work just has not been done yet.

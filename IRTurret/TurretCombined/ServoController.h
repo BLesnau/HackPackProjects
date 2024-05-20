@@ -97,7 +97,7 @@ public:
          }
          else if ( move.speed < 0 )
          {
-            speed = map( move.speed, -1, 0, zeroSpeed - maxSpeed, zeroSpeed - minSpeed );
+            speed = map( move.speed, -100, 0, zeroSpeed - maxSpeed, zeroSpeed - minSpeed );
          }
 
          if ( !move.isWaitMove )
